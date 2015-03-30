@@ -6,8 +6,10 @@ To simply use the latest stable version, run
 
     docker run -d -p 25565:25565 itzg/minecraft-server
 
-where the default server port, 25565, will be exposed on your host machine. If you want to serve up multiple
-Minecraft servers or just use an alternate port, change the host-side port mapping such as
+where the standard server port, 25565, will be exposed on your host machine.
+
+If you want to serve up multiple Minecraft servers or just use an alternate port,
+change the host-side port mapping such as
 
     docker run -p 25566:25565 ...
 
@@ -16,16 +18,35 @@ will serve your Minecraft server on your host's port 25566 since the `-p` syntax
 
 Speaking of multiple servers, it's handy to give your containers explicit names using `--name`, such as
 
-    docker run -d -p 25565:25565 --name minecraft-default itzg/minecraft-server
+    docker run -d -p 25565:25565 --name mc itzg/minecraft-server
 
 With that you can easily view the logs, stop, or re-start the container:
 
-    docker logs -f minecraft-default
+    docker logs -f mc
         ( Ctrl-C to exit logs action )
 
-    docker stop minecraft-default
+    docker stop mc
 
-    docker start minecraft-default
+    docker start mc
+
+## Interacting with the server
+
+In order to attach and interact with the Minecraft server, add `-it` when starting the container, such as
+
+    docker run -d -it -p 25565:25565 --name mc itzg/minecraft-server
+
+With that you can attach and interact at any time using
+
+    docker attach mc
+
+and then Control-p Control-q to **detach**.
+
+For remote access, configure your Docker daemon to use a `tcp` socket (such as `-H tcp://0.0.0.0:2375`)
+and attach from another machine:
+
+    docker -H $HOST:2375 attach mc
+
+Unless you're on a home/private LAN, you should [enable TLS access](https://docs.docker.com/articles/https/).
 
 ## EULA Support
 
@@ -35,7 +56,7 @@ Mojang now requires accepting the [Minecraft EULA](https://account.mojang.com/do
 
 such as
 
-        docker run -e EULA=TRUE -d -p 25565:25565 itzg/minecraft-server
+        docker run -d -it -e EULA=TRUE -p 25565:25565 itzg/minecraft-server
 
 ## Attaching data directory to host filesystem
 
@@ -56,7 +77,7 @@ replacing 1000 with a UID that is present on the host.
 Here is one way to find the UID given a username:
 
     grep some_host_user /etc/passwd|cut -d: -f3
-    
+
 ## Versions
 
 To use a different Minecraft version, pass the `VERSION` environment variable, which can have the value
@@ -72,6 +93,38 @@ For example, to use the latest snapshot:
 or a specific version:
 
     docker run -d -e VERSION=1.7.9 ...
+
+## Running a Forge Server
+
+By default the container will run the selected "vanilla" (aka official) Minecraft server, but
+you can also choose to run the `LATEST` or a specific version of a [Forge server](http://www.minecraftforge.net/wiki/).
+Enable Forge server mode by adding a `-e TYPE=FORGE` to your command-line, such as
+
+    $ docker run -d -v /path/on/host:/data -e TYPE=FORGE -e VERSION=1.7.10 \
+        -p 25565:25565 -e EULA=TRUE itzg/minecraft
+
+In order to add mods, you will need to attach the container's `/data` directory
+(see "Attaching data directory to host filesystem”).
+Then, you can add mods to the `/path/on/host/mods` folder you chose. From the example above,
+the `/path/on/host` folder contents look like:
+
+```
+/path/on/host
+├── mods
+│   └── ... INSTALL MODS HERE ...
+├── config
+│   └── ... CONFIGURE MODS HERE ...
+├── ops.json
+├── server.properties
+├── whitelist.json
+└── ...
+```
+
+If you add mods while the container is running, you'll need to restart it to pick those
+up:
+
+    docker stop $ID
+    docker start $ID
 
 ## Server configuration
 
@@ -116,6 +169,13 @@ docker run -d -e 'MOTD=My Server' ...
 
 If you leave it off, the last used or default message will be used. _The example shows how to specify a server
 message of the day that contains spaces by putting quotes around the whole thing._
+
+### PVP Mode
+
+By default servers are created with player-vs-player (PVP) mode enabled. You can disable this with the `PVP`
+environment variable set to `false`, such as
+
+    docker run -d -e PVP=false ...
 
 ### World Save Name
 

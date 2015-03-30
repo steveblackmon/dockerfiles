@@ -2,7 +2,10 @@ FROM itzg/ubuntu-openjdk-7
 
 MAINTAINER itzg
 
-RUN apt-get install -y wget libmozjs-24-bin imagemagick && apt-get clean
+ENV APT_GET_UPDATE 2015-03-28
+RUN apt-get update
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libmozjs-24-bin imagemagick && apt-get clean
 RUN update-alternatives --install /usr/bin/js js /usr/bin/js24 100
 
 RUN wget -O /usr/bin/jsawk https://github.com/micha/jsawk/raw/master/jsawk
@@ -13,17 +16,19 @@ RUN useradd -M -s /bin/false --uid 1000 minecraft \
 
 EXPOSE 25565
 
-ADD start.sh /start
-ADD start-minecraft.sh /start-minecraft
+COPY start.sh /start
+COPY start-minecraft.sh /start-minecraft
 
-VOLUME ['/data']
-ADD server.properties /tmp/server.properties
+VOLUME ["/data"]
+COPY server.properties /tmp/server.properties
 WORKDIR /data
 
 CMD [ "/start" ]
 
-ENV UID 1000
+# Special marker ENV used by MCCY management tool
+ENV MC_IMAGE=YES
+
+ENV UID=1000
 ENV MOTD A Minecraft Server Powered by Docker
-ENV LEVEL world
 ENV JVM_OPTS -Xmx1024M -Xms1024M
-ENV VERSION LATEST
+ENV TYPE=VANILLA VERSION=LATEST LEVEL=world PVP=true
